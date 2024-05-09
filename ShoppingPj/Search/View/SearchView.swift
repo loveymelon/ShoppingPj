@@ -7,40 +7,23 @@
 
 import SwiftUI
 
-struct SearchData: Identifiable {
-    let id = UUID()
-    let searchText: String
-}
-
 struct SearchView: View {
     
     @State
     private var str = ""
     
-    @State
-    private var recentSearch: [SearchData] = []
+    @StateObject
+    var viewModel = SearchViewModel()
     
     private var columns: [GridItem] = Array(repeating: GridItem(.flexible()), count: 1)
-    
-    private var topHelperView: some View = HStack {
-        Text("최근 검색")
-            .foregroundStyle(.black)
-            .bold()
-        Spacer()
-        Button("모두 지우기") {
-            print("clean")
-        }.foregroundStyle(.green)
-        .bold()
-    }.padding(.horizontal, 10)
-    
 
     var body: some View {
         NavigationStack {
             VStack {
-                topHelperView
+                createHeaderViews()
                     
                 LazyVGrid(columns: columns, spacing: 20, content: {
-                    ForEach(Array(recentSearch.enumerated()), id: \.offset) { index, searchText in
+                    ForEach(Array(viewModel.output.outputRecentSearch.enumerated()), id: \.offset) { index, searchText in
                         recentSearchViews(text: searchText.searchText, index: index)
                     }
                 })
@@ -51,8 +34,25 @@ struct SearchView: View {
         }
         .searchable(text: $str, placement: .navigationBarDrawer(displayMode: .always),prompt: "브랜드, 상품, 프로필, 태그 등")
         .onSubmit(of: .search) {
-            recentSearch.insert(SearchData(searchText: str), at: 0)
+            viewModel.input.searchText.send(str)
         }
+    }
+    
+}
+
+extension SearchView {
+    private func createHeaderViews() -> some View {
+        var topHeaderView: some View = HStack {
+                Text("최근 검색")
+                    .foregroundStyle(.black)
+                    .bold()
+                Spacer()
+                Text("모두 지우기").asPointButton {
+                    viewModel.input.deleteAll.send(())
+                }
+            }.padding(.horizontal, 10)
+        
+        return topHeaderView
     }
     
     private func recentSearchViews(text: String, index: Int) -> some View {
@@ -62,7 +62,7 @@ struct SearchView: View {
             Text(text)
             Spacer()
             Button(action: {
-                recentSearch.remove(at: index)
+                viewModel.input.deleteRecent.send(index)
             }, label: {
                 Image(systemName: "xmark")
                     .foregroundStyle(.gray)
@@ -71,15 +71,4 @@ struct SearchView: View {
         
         return recentSearchView
     }
-    
-}
-
-struct aView: View {
-    var body: some View {
-        Text("dd")
-    }
-}
-
-#Preview {
-    SearchView()
 }
